@@ -9,6 +9,15 @@
 *.dll
 *.exe
 
+# Downloaded llama.cpp runtime (add binaries yourself - see README Step 2)
+/llama/
+
+# Downloaded GGUF models (add models yourself - see README Step 3)
+/models/
+
+# Worktree sandboxes created by create-worktree.bat
+/worktrees/
+
 # IDE and editor files
 .vscode/
 .idea/
@@ -24,6 +33,9 @@ temp/
 # OS files
 .DS_Store
 Thumbs.db
+
+# MCP config (personal setup - copy from mcp/mcp.json.example)
+/mcp/mcp.json
 
 # Environment files
 .env

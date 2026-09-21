@@ -291,11 +291,15 @@ PortableAi/
 ├── models/                 # GGUF models — DOWNLOAD SEPARATELY (not in repo)
 │   └── *.gguf
 ├── mcp/                    # MCP server config — created by you (not in repo)
+│   ├── mcp.json.example    #   ← template, copy to mcp.json
 │   └── mcp.json
+├── worktrees/              # worktree sandboxes (created by create-worktree.bat, gitignored)
 ├── workspace/
 │   └── logs/               # session logs (generated at runtime, gitignored)
 ├── run-llama.bat           # ⭐ the launcher — the whole app
-├── .gitignore              # excludes exe/dll/gguf/bin/dat files
+├── create-worktree.bat     # ⭐ create an isolated agent sandbox (branch + worktree)
+├── remove-worktree.bat     # ⭐ remove a sandbox safely (checks for unmerged work)
+├── .gitignore              # excludes exe/dll/gguf/bin/dat, llama/, models/, worktrees/
 ├── LICENSE                 # MIT
 └── README.md
 ```
@@ -318,6 +322,51 @@ Just drop more `.gguf` files into `models/`. The launcher lists all of them at s
 
 **Linux / macOS?**
 The launcher is a Windows `.bat`, but the concept is identical: run `llama-server` with the same flags. Porting the script to a shell script is straightforward.
+
+---
+
+## 🌿 Worktree Sandboxes (safe agent workspaces)
+
+Want the AI agent (or yourself) to work on something without risking your main checkout? Create an isolated **worktree sandbox** — a separate folder + git branch.
+
+### Create a sandbox
+
+```bash
+create-worktree.bat my-feature        # or run it with no arguments for an interactive prompt
+```
+
+This will:
+
+1. Create branch `worktree/my-feature` from your last commit
+2. Create folder `worktrees/my-feature/` with the full repo
+3. **Link `llama\` and `models\` from the main checkout via directory junctions** — zero extra disk space, and the sandbox can run models immediately
+4. Copy `mcp/mcp.json` into the sandbox
+5. Add per-worktree git exclusions so linked/copied files never show up in `git status`
+
+### Work inside the sandbox
+
+```bash
+cd worktrees/my-feature
+run-llama.bat        # the agent now works on the my-feature branch
+```
+
+Everything the agent changes happens **only inside the sandbox** — your main checkout stays clean. Your `.gguf` models and llama binaries are shared, not duplicated.
+
+### Keep or discard the results
+
+```bash
+git -C worktrees/my-feature status    # inspect what changed
+git diff master worktree/my-feature   # review the changes
+git merge worktree/my-feature         # keep them (run from the main checkout)
+```
+
+### Remove a sandbox
+
+```bash
+remove-worktree.bat my-feature
+```
+
+It refuses to silently destroy work: it warns about **uncommitted changes** and about **commits not yet merged into master**, and keeps the branch if it still has unmerged commits. The `worktrees/` folder is gitignored, so sandboxes never pollute the repo.
 
 ---
 
