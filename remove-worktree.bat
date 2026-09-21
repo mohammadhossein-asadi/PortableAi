@@ -160,7 +160,7 @@ if "%IS_DIRTY%"=="1" (
 
     set /p "CONFIRM_DIRTY=Discard uncommitted changes and continue? [y/N]: "
 
-    if /I not "!CONFIRM_DIRTY!"=="y" (
+    if /I not "!CONFIRM_DIRTY:~0,1!"=="y" (
         echo.
         echo Cancelled - nothing was removed.
         echo.
@@ -202,7 +202,7 @@ if "%AHEAD%"=="0" (
 
     set /p "CONFIRM_AHEAD=Delete the branch and lose these commits? [y/N]: "
 
-    if /I not "!CONFIRM_AHEAD!"=="y" (
+    if /I not "!CONFIRM_AHEAD:~0,1!"=="y" (
         echo.
         echo Keeping the branch. The worktree folder is still removed.
         echo.
@@ -227,6 +227,15 @@ REM ============================================================
 
 echo [5/6] Removing the worktree...
 
+REM Remove the directory junctions first. A plain rmdir on a junction
+REM deletes ONLY the link, never the linked target folder. If git had
+REM to remove them itself it would leave them behind, resulting in a
+REM stale leftover folder.
+
+if exist "%WT_PATH%\llama" rmdir "%WT_PATH%\llama" >nul 2>&1
+
+if exist "%WT_PATH%\models" rmdir "%WT_PATH%\models" >nul 2>&1
+
 git worktree remove --force "%WT_PATH%"
 
 if errorlevel 1 (
@@ -237,6 +246,29 @@ if errorlevel 1 (
     echo Try manually:
     echo   git worktree remove --force "%WT_PATH%"
     echo   git worktree prune
+    echo.
+
+    pause
+    exit /b 1
+)
+
+REM Belt and suspenders: if anything is still left on disk (no
+REM junctions remain at this point), delete the residue and prune.
+
+if exist "%WT_PATH%" (
+
+    rmdir /s /q "%WT_PATH%" >nul 2>&1
+
+    git worktree prune >nul 2>&1
+)
+
+if exist "%WT_PATH%" (
+
+    echo.
+    echo [ERROR] The folder could not be fully removed:
+    echo   %WT_PATH%
+    echo.
+    echo A file may be locked - close any program using it and retry.
     echo.
 
     pause

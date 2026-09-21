@@ -217,16 +217,65 @@ echo [3/8] Checking for conflicts...
 
 if exist "%WT_PATH%" (
 
-    echo.
-    echo [ERROR] Folder already exists:
-    echo   %WT_PATH%
-    echo.
-    echo Remove it first:
-    echo   remove-worktree.bat %WORKTREE_NAME%
-    echo.
+    if not exist "%WT_PATH%\.git" (
 
-    pause
-    exit /b 1
+        REM Stale leftover folder (e.g. a crashed run or manual
+        REM deletion) - it is not a registered worktree anymore.
+
+        echo [WARN] Stale leftover folder found:
+        echo   %WT_PATH%
+        echo.
+        echo It is not a registered worktree.
+        echo.
+
+        set /p "CONFIRM_STALE=Delete the leftover folder and continue? [y/N]: "
+
+        if /I not "!CONFIRM_STALE:~0,1!"=="y" (
+
+            echo.
+            echo Cancelled. Remove it manually:
+            echo   rmdir /s /q "%WT_PATH%"
+            echo.
+
+            pause
+            exit /b 1
+        )
+
+        REM Clear junctions first - a plain rmdir on a junction
+        REM deletes only the link, never the linked target folder.
+
+        if exist "%WT_PATH%\llama" rmdir "%WT_PATH%\llama" >nul 2>&1
+        if exist "%WT_PATH%\models" rmdir "%WT_PATH%\models" >nul 2>&1
+
+        rmdir /s /q "%WT_PATH%" >nul 2>&1
+
+        if exist "%WT_PATH%" (
+
+            echo.
+            echo [ERROR] Could not delete the leftover folder.
+            echo A file may be locked - close programs using it and retry.
+            echo.
+
+            pause
+            exit /b 1
+        )
+
+        echo [OK] Leftover folder removed.
+        echo.
+
+    ) else (
+
+        echo.
+        echo [ERROR] Folder already exists and is a registered worktree:
+        echo   %WT_PATH%
+        echo.
+        echo Remove it first:
+        echo   remove-worktree.bat %WORKTREE_NAME%
+        echo.
+
+        pause
+        exit /b 1
+    )
 )
 
 git show-ref --verify --quiet "refs/heads/%BRANCH_NAME%"
@@ -278,7 +327,7 @@ if "%IS_DIRTY%"=="1" (
     echo.
     set /p "CONFIRM_DIRTY=Continue anyway? [y/N]: "
 
-    if /I not "!CONFIRM_DIRTY!"=="y" (
+    if /I not "!CONFIRM_DIRTY:~0,1!"=="y" (
         echo.
         echo Cancelled.
         echo.
@@ -336,6 +385,12 @@ REM disk space, fully functional.
 
 if exist "%LLAMA_DIR%\llama-server.exe" (
 
+    REM A leftover empty/partial folder (e.g. from a tracked file)
+    REM would block the junction, so clear it first. Any deleted
+    REM tracked files are recoverable from git.
+
+    if exist "%WT_PATH%\llama" rmdir /s /q "%WT_PATH%\llama" >nul 2>&1
+
     mklink /J "%WT_PATH%\llama" "%LLAMA_DIR%" >nul 2>&1
 
     if errorlevel 1 (
@@ -353,6 +408,8 @@ if exist "%LLAMA_DIR%\llama-server.exe" (
 echo.
 
 if exist "%MODELS_DIR%\*.gguf" (
+
+    if exist "%WT_PATH%\models" rmdir /s /q "%WT_PATH%\models" >nul 2>&1
 
     mklink /J "%WT_PATH%\models" "%MODELS_DIR%" >nul 2>&1
 
