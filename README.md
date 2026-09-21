@@ -2,7 +2,7 @@
 
 **PortableAI** is a fully offline, portable AI agent that runs **100% on your own machine** — no cloud, no API keys, no subscriptions, no data leaving your computer.
 
-It wraps the [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` into a simple Windows launcher (`run-llama.bat`) that gives you:
+It wraps the [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` into a simple launcher — `run-llama.bat` (Windows) or `run-llama.sh` (Linux / macOS) — that gives you:
 
 - 💬 **Normal chat** with any GGUF model
 - 🧠 **Reasoning / thinking mode** (with effort levels and token budgets)
@@ -30,7 +30,7 @@ The following large files are **intentionally NOT pushed to GitHub** (they are e
 
 ## 📋 Requirements
 
-- **OS:** Windows 10 / 11 (64-bit)
+- **OS:** Windows 10 / 11 (64-bit), **or Linux / macOS** via `run-llama.sh`
 - **RAM / VRAM:** depends on the model (see the model table in Step 3)
   - 1B–4B models → 4–8 GB RAM, runs on almost any PC
   - 7B models → 8–12 GB
@@ -61,7 +61,8 @@ PortableAi/
 ├── models/       (empty — you add GGUF models in Step 3)
 ├── mcp/          (empty — optional, for MCP servers)
 ├── workspace/    (logs are written here automatically)
-├── run-llama.bat (the launcher — this is the whole app)
+├── run-llama.bat (the launcher — this is the whole app, Windows)
+├── run-llama.sh  (the launcher — Linux / macOS)
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -72,21 +73,25 @@ PortableAi/
 ### Step 2 — Download llama.cpp binaries → put them in `llama/`
 
 1. Go to the llama.cpp releases page: **https://github.com/ggml-org/llama.cpp/releases**
-2. Download the **latest Windows build**:
-   - `llama-bXXXX-bin-win-cpu-x64.zip` → CPU only (works everywhere)
-   - `llama-bXXXX-bin-win-cuda-12.4-x64.zip` → NVIDIA GPU (much faster)
-3. **Extract ALL files** from the ZIP directly into the `llama/` folder.
+2. Download the **latest build for your OS**:
+   - Windows, CPU only: `llama-bXXXX-bin-win-cpu-x64.zip` (works everywhere)
+   - Windows, NVIDIA GPU: `llama-bXXXX-bin-win-cuda-12.4-x64.zip` (much faster)
+   - Linux (CPU): `llama-bXXXX-bin-ubuntu-x64.zip`
+   - macOS (Apple Silicon): `llama-bXXXX-bin-macos-arm64.zip`
+3. **Extract ALL files** from the archive directly into the `llama/` folder.
 
 When done, you must have **at least** this file:
 
 ```
-PortableAi/llama/llama-server.exe   ← required
-PortableAi/llama/llama.dll          ← required
-PortableAi/llama/ggml.dll           ← required
+PortableAi/llama/llama-server.exe   ← required on Windows
+PortableAi/llama/llama-server       ← required on Linux / macOS
 ```
 
-> ✅ If you can see `llama\llama-server.exe`, Step 2 is complete.
+(plus the shared libraries that ship alongside them: `llama.dll` / `ggml.dll` on Windows, `libllama.so` / `libggml*.so` on Linux, etc.)
+
+> ✅ If you can see `llama\llama-server.exe` (Windows) or `llama/llama-server` (Linux/macOS), Step 2 is complete.
 > ❌ The launcher will refuse to start without it.
+> ⚠️ Do not mix: a Windows `.exe` will not run on Linux/macOS and vice versa.
 
 ---
 
@@ -119,11 +124,20 @@ Popular models that match what this project was built and tested with:
 
 ### Step 4 — Run the launcher
 
-Double-click **`run-llama.bat`** (or run it from a terminal):
+**Windows:** double-click **`run-llama.bat`** (or run it from a terminal):
 
 ```bash
 run-llama.bat
 ```
+
+**Linux / macOS:** run the shell launcher:
+
+```bash
+chmod +x run-llama.sh     # only needed the first time
+./run-llama.sh
+```
+
+Both launchers offer the identical menu and produce identical server flags. If `./run-llama.sh` prints `bad interpreter` or `\r` errors, the file was converted to Windows line endings — run `sed -i 's/\r$//' run-llama.sh` once to fix it (git's `.gitattributes` in this repo normally prevents this).
 
 The launcher will:
 
@@ -271,6 +285,8 @@ It records the date, model, mode, server URL, all flags, and the exact command l
 | `[ERROR] llama-server.exe was not found` | You skipped **Step 2** — extract the llama.cpp release ZIP into `llama/` |
 | `[ERROR] No GGUF models found` | You skipped **Step 3** — put at least one `.gguf` file in `models/` |
 | The window closes instantly | Run `run-llama.bat` from a terminal (`cmd`) to see the error |
+| `permission denied: ./run-llama.sh` | Run `chmod +x run-llama.sh` once, then `./run-llama.sh` |
+| `bad interpreter` / `\r` errors from `.sh` | Windows line endings got in: `sed -i 's/\r$//' run-llama.sh` |
 | Model loads very slowly | Large FP16 models take minutes; use a smaller quant (Q4) or the CUDA build |
 | Out-of-memory / crash on load | Pick a smaller model or a lower quant (Q2/IQ2) |
 | Very slow generation | Use a smaller model, a Q4 quant, or the CUDA build of llama.cpp |
@@ -296,7 +312,8 @@ PortableAi/
 ├── worktrees/              # worktree sandboxes (created by create-worktree.bat, gitignored)
 ├── workspace/
 │   └── logs/               # session logs (generated at runtime, gitignored)
-├── run-llama.bat           # ⭐ the launcher — the whole app
+├── run-llama.bat           # ⭐ the launcher — the whole app (Windows)
+├── run-llama.sh            # ⭐ the launcher — the whole app (Linux / macOS)
 ├── create-worktree.bat     # ⭐ create an isolated agent sandbox (branch + worktree)
 ├── remove-worktree.bat     # ⭐ remove a sandbox safely (checks for unmerged work)
 ├── .gitignore              # excludes exe/dll/gguf/bin/dat, llama/, models/, worktrees/
@@ -321,7 +338,7 @@ Run `run-llama.bat` twice — the port scanner gives each instance its own port.
 Just drop more `.gguf` files into `models/`. The launcher lists all of them at startup.
 
 **Linux / macOS?**
-The launcher is a Windows `.bat`, but the concept is identical: run `llama-server` with the same flags. Porting the script to a shell script is straightforward.
+Yes — use `./run-llama.sh`. It is a full port of the Windows launcher with the same menu, modes, flags, port scan, and session logs. Download the Linux or macOS llama.cpp build (see Step 2); everything else works the same. Only `create-worktree.bat` / `remove-worktree.bat` are Windows-only (plain `git worktree add` / `git worktree remove` are the equivalent there).
 
 ---
 
