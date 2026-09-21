@@ -1,5 +1,7 @@
 # PortableAI — Portable Local AI Agent Launcher
 
+![Release](https://img.shields.io/github/v/release/mohammadhossein-asadi/PortableAi) ![License](https://img.shields.io/github/license/mohammadhossein-asadi/PortableAi) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue) ![Cloud](https://img.shields.io/badge/cloud-none-success)
+
 **PortableAI** is a fully offline, portable AI agent that runs **100% on your own machine** — no cloud, no API keys, no subscriptions, no data leaving your computer.
 
 It wraps the [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` into a simple launcher — `run-llama.bat` (Windows) or `run-llama.sh` (Linux / macOS) — that gives you:
@@ -79,6 +81,7 @@ PortableAi/
 ├── run-llama.sh  (the launcher — Linux / macOS)
 ├── setup.bat     (one-command setup wizard — Windows)
 ├── setup.sh      (one-command setup wizard — Linux / macOS)
+├── docs/         (screenshots)
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -116,11 +119,11 @@ Extras: `./setup.sh --list` prints the curated models without downloading anythi
 > The setup wizard above does all of this automatically — the steps below are the manual equivalent.
 
 1. Go to the llama.cpp releases page: **https://github.com/ggml-org/llama.cpp/releases**
-2. Download the **latest build for your OS**:
+2. Download the **latest build for your OS** (the assets live in the newest `b<N>` release, not `latest`):
    - Windows, CPU only: `llama-bXXXX-bin-win-cpu-x64.zip` (works everywhere)
    - Windows, NVIDIA GPU: `llama-bXXXX-bin-win-cuda-12.4-x64.zip` (much faster)
-   - Linux (CPU): `llama-bXXXX-bin-ubuntu-x64.zip`
-   - macOS (Apple Silicon): `llama-bXXXX-bin-macos-arm64.zip`
+   - Linux (CPU): `llama-bXXXX-bin-ubuntu-x64.tar.gz`
+   - macOS (Apple Silicon): `llama-bXXXX-bin-macos-arm64.tar.gz`
 3. **Extract ALL files** from the archive directly into the `llama/` folder.
 
 When done, you must have **at least** this file:
@@ -146,18 +149,17 @@ PortableAi/llama/llama-server       ← required on Linux / macOS
 2. Download the `.gguf` file of a model you like.
 3. **Put the `.gguf` file inside the `models/` folder.**
 
-Popular models that match what this project was built and tested with:
+Tested models (every URL below verified — the setup wizard's curated list is exactly these five):
 
 | Model | Hugging Face repo | Approx. size | Min. RAM/VRAM |
 |-------|-------------------|--------------|----------------|
-| DeepSeek-R1-Distill-Qwen-1.5B (Q5_K_M) | `bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF` | ~1.1 GB | 4 GB |
-| Gemma-3-1B-IT (IQ4_NL) | `bartowski/gemma-3-1b-it-GGUF` | ~0.7 GB | 4 GB |
-| Qwen3.5-4B (IQ4_NL) | search "Qwen3.5 GGUF" | ~2.5 GB | 6 GB |
-| DeepSeek-R1-Distill-Qwen-7B (IQ2_M) | `bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF` | ~3.3 GB | 6 GB |
-| DeepSeek-Coder-V2-Lite-Instruct (Q2_K) | `bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF` | ~6 GB | 8 GB |
-| Gemma 12B (Q3_K_S) | search "gemma 12b GGUF" | ~6.5 GB | 10 GB |
-| Qwen2.5-Coder-7B-Instruct (FP16, 4 parts) | `Qwen/Qwen2.5-Coder-7B-Instruct-GGUF` | ~15 GB | 16 GB |
-| Qwen2.5-Coder-14B-Instruct (FP16, 4 parts) | `Qwen/Qwen2.5-Coder-14B-Instruct-GGUF` | ~28 GB | 32 GB |
+| DeepSeek-R1-Distill-Qwen-1.5B (Q5_K_M) | `bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF` | ~1.2 GB | 4 GB |
+| Gemma-2-2B-IT (IQ4_XS) | `bartowski/gemma-2-2b-it-GGUF` | ~1.5 GB | 4 GB |
+| Qwen2.5-3B-Instruct (Q4_K_M) | `bartowski/Qwen2.5-3B-Instruct-GGUF` | ~1.9 GB | 6 GB |
+| Llama-3.2-3B-Instruct (Q4_K_M) | `bartowski/Llama-3.2-3B-Instruct-GGUF` | ~1.9 GB | 6 GB |
+| Qwen2.5-Coder-7B-Instruct (Q4_K_M, 2 parts) | `Qwen/Qwen2.5-Coder-7B-Instruct-GGUF` | ~4.7 GB | 8 GB |
+
+Bigger models work too — browse **https://huggingface.co/models?library=gguf** and match the size to your RAM.
 
 > 💡 **Quantization guide:** `Q4_K_M` / `IQ4_NL` = best quality/size balance. `Q2`/`IQ2` = small but dumber. `FP16` = full quality but huge. When in doubt, pick Q4.
 
@@ -246,6 +248,7 @@ After the server starts, your browser opens `http://127.0.0.1:8080` automaticall
 - Type in the chat box and the model answers locally
 - When tools are enabled, the model can call them and you see the tool calls in the UI
 - Multi-turn conversations are kept in the browser
+- If the page shows **Server unavailable**, the launcher session has ended (closing the launcher window stops the server) — start `run-llama.bat` / `./run-llama.sh` again, then click **Retry** in the tab
 
 ---
 
@@ -356,6 +359,7 @@ It records the date, model, mode, server URL, all flags, and the exact command l
 | Out-of-memory / crash on load | Pick a smaller model or a lower quant (Q2/IQ2) |
 | Very slow generation | Use a smaller model, a Q4 quant, or the CUDA build of llama.cpp |
 | Port 8080 busy | The launcher auto-scans the next 100 ports — check the printed URL |
+| Web UI shows *Server unavailable* | The server is not running (session ended or window closed) — start the launcher again, then click **Retry** in the browser tab |
 | Web Search disabled | Web search requires MCP: create `mcp/mcp.json` and use mode 5 or 6 |
 | `npx` not recognized | Install Node.js from https://nodejs.org (only needed for MCP) |
 | CLI run type says *unavailable* | `llama-cli(.exe)` is missing from `llama/` — download the full llama.cpp release (Step 2) |
@@ -378,6 +382,7 @@ PortableAi/
 ├── worktrees/              # worktree sandboxes (created by create-worktree.bat, gitignored)
 ├── workspace/
 │   └── logs/               # session logs (generated at runtime, gitignored)
+├── docs/                   # screenshots + the script that regenerates them
 ├── setup.bat               # ⭐ one-command setup wizard (Windows)
 ├── setup.sh                # ⭐ one-command setup wizard (Linux / macOS)
 ├── run-llama.bat           # ⭐ the launcher — the whole app (Windows)
