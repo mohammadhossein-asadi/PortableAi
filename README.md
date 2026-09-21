@@ -62,8 +62,11 @@ PortableAi/
 ├── models/       (empty — you add GGUF models in Step 3)
 ├── mcp/          (empty — optional, for MCP servers)
 ├── workspace/    (logs are written here automatically)
+├── tmp/          (setup downloads land here; cleaned up automatically)
 ├── run-llama.bat (the launcher — this is the whole app, Windows)
 ├── run-llama.sh  (the launcher — Linux / macOS)
+├── setup.bat     (one-command setup wizard — Windows)
+├── setup.sh      (one-command setup wizard — Linux / macOS)
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -71,7 +74,34 @@ PortableAi/
 
 ---
 
+#### ⚡ One-command setup (recommended)
+
+Run the setup wizard once and skip the manual steps below:
+
+```bat
+setup.bat
+```
+
+```bash
+./setup.sh
+```
+
+The wizard automatically:
+
+1. **Detects your OS and GPU** and downloads the right llama.cpp build into `llama/` — on Windows it offers CPU or CUDA if an NVIDIA card is found; on Linux/macOS it picks the matching official build.
+2. **Lets you pick a curated GGUF model** (every URL is verified, sizes shown) — or paste any Hugging Face GGUF URL — and downloads it into `models/`.
+
+Re-run it any time: finished parts are skipped, and **interrupted model downloads resume where they left off** (the finished file is size-verified, so a truncated download is always detected instead of failing later at model load).
+
+Extras: `./setup.sh --list` prints the curated models without downloading anything.
+
+> 💡 Behind the scenes the script reads llama.cpp's release feed (`releases/latest` on GitHub is only a stub — the real binaries live in the rolling `b<N>` releases, which the script handles for you).
+
+---
+
 ### Step 2 — Download llama.cpp binaries → put them in `llama/`
+
+> The setup wizard above does all of this automatically — the steps below are the manual equivalent.
 
 1. Go to the llama.cpp releases page: **https://github.com/ggml-org/llama.cpp/releases**
 2. Download the **latest build for your OS**:
@@ -97,6 +127,8 @@ PortableAi/llama/llama-server       ← required on Linux / macOS
 ---
 
 ### Step 3 — Download GGUF models → put them in `models/`
+
+> The setup wizard above can also download a model for you (curated list or any Hugging Face URL) — the steps below are the manual equivalent.
 
 1. Go to **https://huggingface.co/models?library=gguf&sort=downloads** (or search "GGUF" + the model name).
 2. Download the `.gguf` file of a model you like.
@@ -301,6 +333,8 @@ It records the date, model, mode, server URL, all flags, and the exact command l
 
 | Problem | Solution |
 |---------|----------|
+| `[ERROR] No llama.cpp asset found` in setup | llama.cpp changed their release layout — grab the zip manually from https://github.com/ggml-org/llama.cpp/releases (Windows CPU: `llama-bNNNN-bin-win-cpu-x64.zip`) |
+| `[ERROR] Downloaded file is incomplete` in setup | The connection dropped mid-download — just re-run `setup.bat` / `./setup.sh` and pick the same model; it resumes from where it stopped |
 | `[ERROR] llama-server.exe was not found` | You skipped **Step 2** — extract the llama.cpp release ZIP into `llama/` |
 | `[ERROR] No GGUF models found` | You skipped **Step 3** — put at least one `.gguf` file in `models/` |
 | The window closes instantly | Run `run-llama.bat` from a terminal (`cmd`) to see the error |
@@ -332,6 +366,8 @@ PortableAi/
 ├── worktrees/              # worktree sandboxes (created by create-worktree.bat, gitignored)
 ├── workspace/
 │   └── logs/               # session logs (generated at runtime, gitignored)
+├── setup.bat               # ⭐ one-command setup wizard (Windows)
+├── setup.sh                # ⭐ one-command setup wizard (Linux / macOS)
 ├── run-llama.bat           # ⭐ the launcher — the whole app (Windows)
 ├── run-llama.sh            # ⭐ the launcher — the whole app (Linux / macOS)
 ├── create-worktree.bat     # ⭐ create an isolated agent sandbox (branch + worktree)
