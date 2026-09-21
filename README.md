@@ -5,6 +5,7 @@
 It wraps the [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` into a simple launcher — `run-llama.bat` (Windows) or `run-llama.sh` (Linux / macOS) — that gives you:
 
 - 💬 **Normal chat** with any GGUF model
+- 🖥️ **Two ways to run** — Server (Web UI + API) or CLI (terminal chat)
 - 🧠 **Reasoning / thinking mode** (with effort levels and token budgets)
 - 🛠️ **Built-in agent tools** (read/write/edit files, grep, glob, shell commands)
 - 🔌 **MCP servers** (Model Context Protocol) — plug in extra tools like **web search**
@@ -144,11 +145,27 @@ The launcher will:
 1. ✅ Check that `llama\llama-server.exe` exists
 2. ✅ Scan `models\` for `.gguf` files and list them
 3. ✅ Ask you to **select a model** (auto-selects if there is only one)
-4. ✅ Show the **Agent Mode menu** (see next section)
-5. ✅ Find a free port (starts at `8080`)
-6. ✅ Print the final configuration
-7. ✅ Open your browser at `http://127.0.0.1:8080`
-8. ✅ Start the server
+4. ✅ Ask for the **Run Type** — Server (Web UI + API) or CLI (terminal chat)
+5. ✅ Show the **Agent Mode menu** (see next section)
+6. ✅ Find a free port (server run only, starts at `8080`)
+7. ✅ Print the final configuration
+8. ✅ Open your browser at `http://127.0.0.1:8080` (server run only)
+9. ✅ Start `llama-server` or `llama-cli`
+
+---
+
+## 🖥️ Run Types — Server or CLI
+
+After you pick a model, the launcher asks how to run it:
+
+| Run type | What it does |
+|----------|--------------|
+| **Server** | Starts `llama-server` → Web UI at `http://127.0.0.1:8080` plus the OpenAI-compatible API. Supports all agent modes: built-in tools, MCP, web search, reasoning. |
+| **CLI** | Starts `llama-cli` → chat directly in the terminal window. Chat + reasoning work; tools / MCP / web search are server-only features and are skipped (the launcher tells you). |
+
+CLI tips: type your message and press Enter; `/exit` or Ctrl+C quits. The launcher uses `llama-cli`'s conversation mode (`-cnv`), so the model's chat template is applied automatically.
+
+> The CLI option is only available when `llama/` contains `llama-cli` / `llama-cli.exe` — the full llama.cpp release includes it (see Step 2).
 
 ---
 
@@ -167,6 +184,8 @@ When the launcher starts it asks you to pick a mode:
 | 7 | **Custom** | your choice | your choice | your choice | your choice | Full manual control |
 
 ### Built-in tools (modes 3–6)
+
+> Modes 3–6 rely on server-only features. With the **CLI** run type the launcher runs chat + reasoning only and skips tools / MCP / web search.
 
 These llama.cpp server tools are enabled with `--tools all`:
 
@@ -293,6 +312,7 @@ It records the date, model, mode, server URL, all flags, and the exact command l
 | Port 8080 busy | The launcher auto-scans the next 100 ports — check the printed URL |
 | Web Search disabled | Web search requires MCP: create `mcp/mcp.json` and use mode 5 or 6 |
 | `npx` not recognized | Install Node.js from https://nodejs.org (only needed for MCP) |
+| CLI run type says *unavailable* | `llama-cli(.exe)` is missing from `llama/` — download the full llama.cpp release (Step 2) |
 | Model answers with garbage | Wrong chat template — re-download the GGUF from a trusted source |
 | Multi-part model fails | You must keep **all** parts (`00001-of-00004` … `00004-of-00004`) in `models/` and select part 1 |
 
@@ -330,6 +350,9 @@ No. The server binds to `127.0.0.1` only. Nothing leaves your machine — unless
 
 **Do I need a GPU?**
 No. CPU-only works. A GPU just makes it much faster.
+
+**Server or CLI — which one?**
+Server for the Web UI, the OpenAI-compatible API, and agent tools / MCP / web search. CLI for quick terminal chats with no port and no browser.
 
 **Can I use several models at once?**
 Run `run-llama.bat` twice — the port scanner gives each instance its own port.

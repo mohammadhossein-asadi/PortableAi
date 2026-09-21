@@ -251,6 +251,77 @@ echo.
 
 
 REM ============================================================
+REM CHECK CLI BINARY
+REM ============================================================
+
+set "LLAMA_CLI=%ROOT%\llama\llama-cli.exe"
+
+set "CLI_AVAILABLE=0"
+
+if exist "%LLAMA_CLI%" set "CLI_AVAILABLE=1"
+
+
+REM ============================================================
+REM RUN TYPE MENU
+REM ============================================================
+
+:RUN_TYPE_MENU
+
+echo.
+echo ============================================================
+echo                     RUN TYPE
+echo ============================================================
+echo.
+echo   [1] Server   Web UI + OpenAI-compatible API
+echo.
+echo   [2] CLI      Terminal chat in this window
+echo.
+
+if "%CLI_AVAILABLE%"=="0" echo       (llama-cli.exe not found in llama\ - unavailable)
+
+if "%CLI_AVAILABLE%"=="0" echo.
+
+echo ============================================================
+echo.
+
+set "RUN_TYPE="
+
+set /p "RUN_TYPE=Select run type [1-2]: "
+
+if "%RUN_TYPE%"=="1" (
+
+    set "RUN_TYPE_NAME=Server - Web UI + API"
+
+    goto MODE_MENU
+)
+
+if "%RUN_TYPE%"=="2" (
+
+    if "%CLI_AVAILABLE%"=="0" (
+
+        echo.
+        echo [ERROR] llama-cli.exe was not found.
+        echo.
+        echo Download the full llama.cpp release so llama\ contains
+        echo llama-cli.exe - see README Step 2.
+        echo.
+
+        goto RUN_TYPE_MENU
+    )
+
+    set "RUN_TYPE_NAME=CLI - Terminal Chat"
+
+    goto MODE_MENU
+)
+
+echo.
+echo [ERROR] Invalid selection.
+echo.
+
+goto RUN_TYPE_MENU
+
+
+REM ============================================================
 REM MODE MENU
 REM ============================================================
 
@@ -432,6 +503,8 @@ echo                    CUSTOM CONFIGURATION
 echo ============================================================
 echo.
 
+if "%RUN_TYPE%"=="2" goto CUSTOM_REASONING_ONLY
+
 echo Built-in Tools:
 echo   [1] Enabled
 echo   [0] Disabled
@@ -475,6 +548,8 @@ if "%CUSTOM_WEB%"=="1" (
     set "WEB_SEARCH_ENABLED=0"
 )
 
+
+:CUSTOM_REASONING_ONLY
 
 echo.
 echo Reasoning:
@@ -543,6 +618,10 @@ echo Mode:
 echo   %MODE_NAME%
 echo.
 
+echo Run Type:
+echo   %RUN_TYPE_NAME%
+echo.
+
 echo Model:
 echo   %MODEL_NAME%
 echo.
@@ -574,13 +653,11 @@ if "%WEB_SEARCH_ENABLED%"=="1" (
 
 echo.
 
-echo Reasoning:
-echo   %REASONING_MODE%
+echo Reasoning: !REASONING_MODE!
 
 echo.
 
-echo Reasoning Effort:
-echo   %REASONING_EFFORT%
+echo Reasoning Effort: %REASONING_EFFORT%
 
 echo.
 
@@ -590,6 +667,40 @@ echo   %REASONING_BUDGET%
 echo.
 echo ============================================================
 echo.
+
+
+REM ============================================================
+REM CLI RUN: SERVER-ONLY FEATURES ARE NOT AVAILABLE
+REM ============================================================
+
+if "%RUN_TYPE%"=="2" (
+
+    if "%TOOLS_ENABLED%"=="1" (
+
+        echo [NOTE] Built-in tools are a server feature - not available in CLI run.
+        echo.
+
+        set "TOOLS_ENABLED=0"
+    )
+
+    if "%MCP_ENABLED%"=="1" (
+
+        echo [NOTE] MCP is a server feature - not available in CLI run.
+        echo.
+
+        set "MCP_ENABLED=0"
+    )
+
+    if "%WEB_SEARCH_ENABLED%"=="1" (
+
+        echo [NOTE] Web Search is a server feature - not available in CLI run.
+        echo.
+
+        set "WEB_SEARCH_ENABLED=0"
+    )
+
+    goto CLI_ARGS_BUILD
+)
 
 
 REM ============================================================
@@ -635,7 +746,7 @@ REM ============================================================
 REM FIND FREE PORT
 REM ============================================================
 
-echo [6/8] Searching for available port...
+echo [7/8] Searching for available port...
 echo.
 
 set /a CURRENT_PORT=%START_PORT%
@@ -749,10 +860,52 @@ if not "%REASONING_BUDGET%"=="-1" (
 
 )
 
+goto SESSION_LOG_BUILD
+
+
+REM ============================================================
+REM BUILD CLI ARGUMENTS
+REM ============================================================
+
+:CLI_ARGS_BUILD
+
+REM Interactive conversation mode with the model's chat template.
+REM Tools, MCP and Web Search are server-only features (already
+REM disabled above).
+
+set "CLI_ARGS=-m "%MODEL%" -cnv"
+
+if /I "%REASONING_MODE%"=="on" (
+
+    set "CLI_ARGS=!CLI_ARGS! --reasoning on"
+)
+
+if /I "%REASONING_MODE%"=="off" (
+
+    set "CLI_ARGS=!CLI_ARGS! --reasoning off"
+)
+
+if /I "%REASONING_MODE%"=="auto" (
+
+    set "CLI_ARGS=!CLI_ARGS! --reasoning auto"
+)
+
+if /I not "%REASONING_EFFORT%"=="default" (
+
+    set "CLI_ARGS=!CLI_ARGS! --reasoning-effort %REASONING_EFFORT%"
+)
+
+if not "%REASONING_BUDGET%"=="-1" (
+
+    set "CLI_ARGS=!CLI_ARGS! --reasoning-budget %REASONING_BUDGET%"
+)
+
 
 REM ============================================================
 REM CREATE SESSION LOG
 REM ============================================================
+
+:SESSION_LOG_BUILD
 
 set "SESSION_LOG=%LOG_DIR%\session_%RANDOM%.log"
 
@@ -768,8 +921,8 @@ set "SESSION_LOG=%LOG_DIR%\session_%RANDOM%.log"
     echo Mode:
     echo %MODE_NAME%
     echo.
-    echo Server:
-    echo http://%HOST%:%PORT%
+    echo Run type:
+    echo %RUN_TYPE_NAME%
     echo.
     echo Built-in Tools:
     echo %TOOLS_ENABLED%
@@ -780,17 +933,20 @@ set "SESSION_LOG=%LOG_DIR%\session_%RANDOM%.log"
     echo Web Search:
     echo %WEB_SEARCH_ENABLED%
     echo.
-    echo Reasoning:
-    echo %REASONING_MODE%
+    echo Reasoning: !REASONING_MODE!
     echo.
-    echo Reasoning Effort:
-    echo %REASONING_EFFORT%
+    echo Reasoning Effort: %REASONING_EFFORT%
     echo.
     echo Reasoning Budget:
     echo %REASONING_BUDGET%
     echo.
     echo Command:
-    echo "%LLAMA_SERVER%" !SERVER_ARGS!
+
+    if "%RUN_TYPE%"=="2" (
+        echo "%LLAMA_CLI%" !CLI_ARGS!
+    ) else (
+        echo "%LLAMA_SERVER%" !SERVER_ARGS!
+    )
     echo.
     echo ============================================================
 ) > "%SESSION_LOG%"
@@ -814,9 +970,15 @@ echo Mode:
 echo   %MODE_NAME%
 echo.
 
-echo Server:
-echo   http://%HOST%:%PORT%
+echo Run Type:
+echo   %RUN_TYPE_NAME%
 echo.
+
+if "%RUN_TYPE%"=="1" (
+    echo Server:
+    echo   http://%HOST%:%PORT%
+    echo.
+)
 
 echo Built-in Tools:
 if "%TOOLS_ENABLED%"=="1" (
@@ -845,13 +1007,11 @@ if "%WEB_SEARCH_ENABLED%"=="1" (
 
 echo.
 
-echo Reasoning:
-echo   %REASONING_MODE%
+echo Reasoning: !REASONING_MODE!
 
 echo.
 
-echo Reasoning Effort:
-echo   %REASONING_EFFORT%
+echo Reasoning Effort: %REASONING_EFFORT%
 
 echo.
 
@@ -886,7 +1046,7 @@ REM ============================================================
 REM OPEN WEB UI
 REM ============================================================
 
-if "%OPEN_BROWSER%"=="1" (
+if "%RUN_TYPE%"=="1" if "%OPEN_BROWSER%"=="1" (
 
     timeout /t 2 /nobreak >nul
 
@@ -900,6 +1060,8 @@ REM START LLAMA SERVER
 REM ============================================================
 
 echo.
+if "%RUN_TYPE%"=="2" goto START_CLI
+
 echo Starting llama-server...
 echo.
 echo ============================================================
@@ -907,18 +1069,43 @@ echo.
 
 "%LLAMA_SERVER%" !SERVER_ARGS!
 
-
-REM ============================================================
-REM SERVER STOPPED
-REM ============================================================
-
-echo.
-echo ============================================================
-echo                    SERVER STOPPED
-echo ============================================================
-echo.
+set "APP_EXIT=%ERRORLEVEL%"
 
 echo llama-server has exited.
+
+goto SESSION_ENDED
+
+
+REM ============================================================
+REM START CLI
+REM ============================================================
+
+:START_CLI
+
+echo Starting llama-cli - terminal chat. Type your message, use /exit
+echo or Ctrl+C to quit.
+echo.
+echo ============================================================
+echo.
+
+"%LLAMA_CLI%" !CLI_ARGS!
+
+set "APP_EXIT=%ERRORLEVEL%"
+
+echo llama-cli has exited.
+
+
+REM ============================================================
+REM SESSION ENDED
+REM ============================================================
+
+:SESSION_ENDED
+
+echo.
+echo ============================================================
+echo                    SESSION ENDED
+echo ============================================================
+echo.
 
 echo.
 echo Session log:

@@ -310,6 +310,90 @@ echo ""
 
 
 # ============================================================
+# CHECK CLI BINARY
+# ============================================================
+
+LLAMA_CLI="$ROOT/llama/llama-cli"
+
+CLI_AVAILABLE=0
+
+if [ -x "$LLAMA_CLI" ]; then
+
+    CLI_AVAILABLE=1
+fi
+
+
+# ============================================================
+# RUN TYPE MENU
+# ============================================================
+
+RUN_TYPE=""
+
+while [ -z "$RUN_TYPE" ]; do
+
+    echo ""
+
+    cat <<'RUNTYPE'
+============================================================
+                    RUN TYPE
+============================================================
+
+  [1] Server   Web UI + OpenAI-compatible API
+
+  [2] CLI      Terminal chat in this window
+
+============================================================
+RUNTYPE
+
+    echo ""
+
+    if [ "$CLI_AVAILABLE" = "0" ]; then
+
+        echo "      (llama-cli not found in llama/ - unavailable)"
+
+        echo ""
+    fi
+
+    printf 'Select run type [1-2]: '
+
+    if ! read -r RUN_TYPE_INPUT; then
+
+        echo ""
+        echo "[ERROR] Input closed - exiting."
+        exit 1
+    fi
+
+    case "$RUN_TYPE_INPUT" in
+
+        1) RUN_TYPE=1
+           RUN_TYPE_NAME="Server (Web UI + API)"
+           ;;
+
+        2) if [ "$CLI_AVAILABLE" = "0" ]; then
+
+               echo ""
+               echo "[ERROR] llama-cli was not found."
+               echo ""
+               echo "Download the full llama.cpp release so llama/ contains"
+               echo "llama-cli - see README Step 2."
+               echo ""
+
+           else
+
+               RUN_TYPE=2
+               RUN_TYPE_NAME="CLI (Terminal Chat)"
+           fi
+           ;;
+
+        *) echo ""
+           echo "[ERROR] Invalid selection."
+           ;;
+    esac
+
+done
+
+
+# ============================================================
 # MODE MENU
 # ============================================================
 
@@ -388,6 +472,8 @@ MENU
 
         7) MODE_NAME="Custom"
 
+           if [ "$RUN_TYPE" = "1" ]; then
+
            echo ""
            echo "Built-in Tools: [1] Enabled  [0] Disabled"
 
@@ -414,6 +500,8 @@ MENU
            read -r CUSTOM_WEB
 
            if [ "$CUSTOM_WEB" = "1" ]; then WEB_SEARCH_ENABLED=1; else WEB_SEARCH_ENABLED=0; fi
+
+           fi
 
            echo ""
            echo "Reasoning: [1] On  [2] Off  [3] Auto"
@@ -489,6 +577,12 @@ echo "  $MODE_NAME"
 
 echo ""
 
+echo "Run Type:"
+
+echo "  $RUN_TYPE_NAME"
+
+echo ""
+
 echo "Model:"
 
 echo "  $MODEL_NAME"
@@ -549,6 +643,41 @@ echo ""
 
 
 # ============================================================
+# CLI RUN: SERVER-ONLY FEATURES ARE NOT AVAILABLE
+# ============================================================
+
+if [ "$RUN_TYPE" = "2" ]; then
+
+    if [ "$TOOLS_ENABLED" = "1" ]; then
+
+        echo "[NOTE] Built-in tools are a server feature - not available in CLI run."
+
+        echo ""
+
+        TOOLS_ENABLED=0
+    fi
+
+    if [ "$MCP_ENABLED" = "1" ]; then
+
+        echo "[NOTE] MCP is a server feature - not available in CLI run."
+
+        echo ""
+
+        MCP_ENABLED=0
+    fi
+
+    if [ "$WEB_SEARCH_ENABLED" = "1" ]; then
+
+        echo "[NOTE] Web Search is a server feature - not available in CLI run."
+
+        echo ""
+
+        WEB_SEARCH_ENABLED=0
+    fi
+fi
+
+
+# ============================================================
 # MCP CONFIGURATION CHECK
 # ============================================================
 
@@ -593,6 +722,8 @@ fi
 # ============================================================
 # FIND FREE PORT
 # ============================================================
+
+if [ "$RUN_TYPE" = "1" ]; then
 
 echo "[6/8] Searching for available port..."
 
@@ -662,31 +793,61 @@ echo "  $PORT"
 
 echo ""
 
+fi
+
+if [ "$RUN_TYPE" = "2" ]; then
+
+    PORT=0
+
+    echo "[OK] CLI run - no port needed."
+
+    echo ""
+fi
+
 
 # ============================================================
 # BUILD SERVER ARGUMENTS
 # ============================================================
 
-SERVER_ARGS=(-m "$MODEL" --host "$HOST" --port "$PORT")
+if [ "$RUN_TYPE" = "1" ]; then
 
+    SERVER_ARGS=(-m "$MODEL" --host "$HOST" --port "$PORT")
 
-# ------------------------------------------------------------
-# BUILT-IN TOOLS
-# ------------------------------------------------------------
+else
 
-if [ "$TOOLS_ENABLED" = "1" ]; then
+    # Interactive conversation mode with the model's chat template.
 
-    SERVER_ARGS+=(--tools "$TOOLS_LIST")
+    CLI_ARGS=(-m "$MODEL" -cnv)
 fi
 
 
 # ------------------------------------------------------------
-# MCP
+# BUILT-IN TOOLS / MCP
 # ------------------------------------------------------------
 
-if [ "$MCP_ENABLED" = "1" ]; then
+if [ "$RUN_TYPE" = "1" ]; then
 
-    SERVER_ARGS+=(--mcp-servers-config "$MCP_CONFIG")
+    if [ "$TOOLS_ENABLED" = "1" ]; then
+
+        SERVER_ARGS+=(--tools "$TOOLS_LIST")
+    fi
+
+    if [ "$MCP_ENABLED" = "1" ]; then
+
+        SERVER_ARGS+=(--mcp-servers-config "$MCP_CONFIG")
+    fi
+
+else
+
+    if [ "$TOOLS_ENABLED" = "1" ]; then
+
+        CLI_ARGS+=(--tools "$TOOLS_LIST")
+    fi
+
+    if [ "$MCP_ENABLED" = "1" ]; then
+
+        CLI_ARGS+=(--mcp-servers-config "$MCP_CONFIG")
+    fi
 fi
 
 
@@ -696,17 +857,31 @@ fi
 
 case "$REASONING_MODE" in
 
-    on|off|auto) SERVER_ARGS+=(--reasoning "$REASONING_MODE") ;;
+    on|off|auto)
+        if [ "$RUN_TYPE" = "1" ]; then
+            SERVER_ARGS+=(--reasoning "$REASONING_MODE")
+        else
+            CLI_ARGS+=(--reasoning "$REASONING_MODE")
+        fi
+        ;;
 esac
 
 if [ "$REASONING_EFFORT" != "default" ]; then
 
-    SERVER_ARGS+=(--reasoning-effort "$REASONING_EFFORT")
+    if [ "$RUN_TYPE" = "1" ]; then
+        SERVER_ARGS+=(--reasoning-effort "$REASONING_EFFORT")
+    else
+        CLI_ARGS+=(--reasoning-effort "$REASONING_EFFORT")
+    fi
 fi
 
 if [ "$REASONING_BUDGET" != "-1" ]; then
 
-    SERVER_ARGS+=(--reasoning-budget "$REASONING_BUDGET")
+    if [ "$RUN_TYPE" = "1" ]; then
+        SERVER_ARGS+=(--reasoning-budget "$REASONING_BUDGET")
+    else
+        CLI_ARGS+=(--reasoning-budget "$REASONING_BUDGET")
+    fi
 fi
 
 
@@ -716,7 +891,15 @@ fi
 
 SESSION_LOG="$LOG_DIR/session_$$_$(date +%s).log"
 
-CMD_DISPLAY="\"$LLAMA_SERVER\" ${SERVER_ARGS[*]}"
+if [ "$RUN_TYPE" = "1" ]; then
+
+    CMD_DISPLAY="\"$LLAMA_SERVER\" ${SERVER_ARGS[*]}"
+
+else
+
+    CMD_DISPLAY="\"$LLAMA_CLI\" ${CLI_ARGS[*]}"
+
+fi
 
 {
 
@@ -731,9 +914,14 @@ CMD_DISPLAY="\"$LLAMA_SERVER\" ${SERVER_ARGS[*]}"
     echo "Mode:"
     echo "$MODE_NAME"
     echo ""
-    echo "Server:"
-    echo "http://$HOST:$PORT"
+    echo "Run type:"
+    echo "$RUN_TYPE_NAME"
     echo ""
+    if [ "$RUN_TYPE" = "1" ]; then
+        echo "Server:"
+        echo "http://$HOST:$PORT"
+        echo ""
+    fi
     echo "Built-in Tools:"
     echo "$TOOLS_ENABLED"
     echo ""
@@ -786,11 +974,21 @@ echo "  $MODE_NAME"
 
 echo ""
 
-echo "Server:"
+echo "Run Type:"
 
-echo "  http://$HOST:$PORT"
+echo "  $RUN_TYPE_NAME"
 
 echo ""
+
+if [ "$RUN_TYPE" = "1" ]; then
+
+    echo "Server:"
+
+    echo "  http://$HOST:$PORT"
+
+    echo ""
+
+fi
 
 if [ "$TOOLS_ENABLED" = "1" ]; then
     echo "Built-in Tools:"
@@ -873,7 +1071,7 @@ fi
 # OPEN WEB UI
 # ============================================================
 
-if [ "$OPEN_BROWSER" = "1" ]; then
+if [ "$RUN_TYPE" = "1" ] && [ "$OPEN_BROWSER" = "1" ]; then
 
     sleep 2
 
@@ -895,17 +1093,41 @@ fi
 
 echo ""
 
-echo "Starting llama-server..."
+if [ "$RUN_TYPE" = "1" ]; then
 
-echo ""
+    echo "Starting llama-server..."
 
-echo "============================================================"
+    echo ""
 
-echo ""
+    echo "============================================================"
 
-"$LLAMA_SERVER" "${SERVER_ARGS[@]}"
+    echo ""
 
-SERVER_EXIT_CODE=$?
+    "$LLAMA_SERVER" "${SERVER_ARGS[@]}"
+
+    SERVER_EXIT_CODE=$?
+
+    echo "llama-server has exited."
+
+else
+
+    echo "Starting llama-cli - terminal chat. Type your message, use /exit"
+
+    echo "or Ctrl+C to quit."
+
+    echo ""
+
+    echo "============================================================"
+
+    echo ""
+
+    "$LLAMA_CLI" "${CLI_ARGS[@]}"
+
+    SERVER_EXIT_CODE=$?
+
+    echo "llama-cli has exited."
+
+fi
 
 
 # ============================================================
@@ -916,7 +1138,7 @@ echo ""
 
 cat <<'STOPPED_HEAD'
 ============================================================
-                   SERVER STOPPED
+                   SESSION ENDED
 ============================================================
 STOPPED_HEAD
 
@@ -924,11 +1146,11 @@ echo ""
 
 if [ "$SERVER_EXIT_CODE" -eq 0 ]; then
 
-    echo "llama-server has exited."
+    echo "The program has exited."
 
 else
 
-    echo "llama-server has exited with code $SERVER_EXIT_CODE."
+    echo "The program has exited with code $SERVER_EXIT_CODE."
 
 fi
 
