@@ -40,5 +40,5 @@ Thumbs.db
 # Environment files
 .env
 
-# Codebuff internal metadata
+# Local assistant metadata
 .freebuff/
