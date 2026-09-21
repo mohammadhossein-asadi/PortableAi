@@ -13,6 +13,18 @@ It wraps the [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` i
 - 🔌 **OpenAI-compatible API** on `http://127.0.0.1:8080/v1`
 - 🔍 **Automatic free-port detection** and session logging
 
+## 📸 Screenshots
+
+All of these are captured from **real runs** of the launcher and setup wizard (regenerate them any time with `docs/make-screenshots.py`).
+
+| The launcher — model & run-type menus | Seven agent modes |
+|----------------------------------------|-------------------|
+| ![The launcher](docs/screenshot-launcher.png) | ![Agent modes](docs/screenshot-agent-modes.png) |
+
+| Server / Web UI summary | One-command setup wizard |
+|-------------------------|---------------------------|
+| ![Server summary](docs/screenshot-server.png) | ![Setup wizard](docs/screenshot-setup.png) |
+
 ---
 
 ## ⚠️ IMPORTANT — What is NOT in this repository
