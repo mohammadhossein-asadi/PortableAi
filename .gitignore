@@ -1,0 +1,29 @@
+# Portable AI - Git Ignore File
+
+# Model files (large GGUF models - not suitable for GitHub repo)
+*.gguf
+*.bin
+*.dat
+
+# Binary runtimes and DLLs
+*.dll
+*.exe
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
