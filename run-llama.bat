@@ -763,7 +763,7 @@ if errorlevel 1 (
     set "PORT=%CURRENT_PORT%"
 
     echo [OK] Available port:
-    echo      %PORT%
+    echo      !PORT!
     echo.
 
     goto PORT_READY
